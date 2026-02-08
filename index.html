@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>DBZ: OMNI ARCHIVE V2</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root{
+ --bg-dark: #05050b;
+ --glass-panel: rgba(16, 16, 24, 0.85);
+ --glass-border: rgba(255, 255, 255, 0.08);
+ --gold: #ffd700;
+ --saiyan-blue: #00e5ff;
+ --villain-purple: #9d00ff;
+ --danger: #ff2a2a;
+ --text-main: #e0e6ed;
+ --font-tech: 'Segoe UI', 'Roboto', monospace;
+}
+
+*{box-sizing:border-box;margin:0;padding:0; scroll-behavior: smooth;}
+
+body{
+ background: var(--bg-dark);
+ color: var(--text-main);
+ font-family: var(--font-tech);
+ overflow-x: hidden;
+ min-height: 100vh;
+ display: flex;
+ flex-direction: column;
+}
+
+/* --- FONDO MEJORADO --- */
+.cyber-grid{
+ position: fixed; inset: 0; z-index: -2;
+ background: 
+  linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+  linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+ background-size: 50px 50px;
+ transform: perspective(500px) rotateX(60deg) translateY(-100px) scale(2);
+ animation: planeFly 20s linear infinite;
+ pointer-events: none;
+}
+.vignette{
+ position: fixed; inset: 0; z-index: -1;
+ background: radial-gradient(circle at center, transparent 0%, #05050b 90%);
+ pointer-events: none;
+}
+
+@keyframes planeFly{
+ 0%{background-position: 0 0;}
+ 100%{background-position: 0 50px;}
+}
+
+/* --- UI COMPONENTS --- */
+header{
+ padding: 3rem 1rem;
+ text-align: center;
+ position: relative;
+ z-index: 10;
+}
+
+.brand-title{
+ font-size: clamp(2.5rem, 8vw, 5rem);
+ font-weight: 900;
+ letter-spacing: -2px;
+ background: linear-gradient(180deg, #fff, #888);
+ -webkit-background-clip: text;
+ color: transparent;
+ text-shadow: 0 0 30px rgba(255,255,255,0.2);
+ position: relative;
+ display: inline-block;
+}
+.brand-title::after{
+ content: 'DATABASE_V2.0';
+ position: absolute;
+ top: 100%; right: 0;
+ font-size: 0.8rem;
+ letter-spacing: 0.4em;
+ color: var(--gold);
+ -webkit-text-fill-color: var(--gold);
+}
+
+.hud-stats{
+ display: flex; justify-content: center; gap: 10px; margin-top: 20px; flex-wrap: wrap;
+}
+.hud-chip{
+ background: rgba(0,0,0,0.6);
+ border: 1px solid var(--glass-border);
+ padding: 5px 15px;
+ border-radius: 4px;
+ font-size: 0.75rem;
+ text-transform: uppercase;
+ color: var(--saiyan-blue);
+ display: flex; align-items: center; gap: 8px;
+}
+.hud-chip.danger{ color: var(--danger); border-color: rgba(255, 42, 42, 0.3); }
+
+/* --- CONTROLES --- */
+.search-bar{
+ max-width: 800px;
+ margin: 0 auto 3rem;
+ padding: 0 1.5rem;
+ display: grid;
+ grid-template-columns: 1fr auto;
+ gap: 1rem;
+}
+input, select{
+ background: rgba(255,255,255,0.05);
+ border: 1px solid var(--glass-border);
+ color: #fff;
+ padding: 1rem;
+ border-radius: 8px;
+ outline: none;
+ font-family: inherit;
+ transition: 0.3s;
+ backdrop-filter: blur(5px);
+}
+input:focus, select:focus{
+ border-color: var(--gold);
+ background: rgba(0,0,0,0.8);
+ box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
+}
+
+/* --- CARDS --- */
+.h-scroll{
+ display: flex;
+ gap: 20px;
+ overflow-x: auto;
+ padding: 20px 5%;
+ scroll-snap-type: x mandatory;
+ padding-bottom: 40px;
+}
+.h-scroll::-webkit-scrollbar{ height: 6px; }
+.h-scroll::-webkit-scrollbar-thumb{ background: var(--gold); border-radius: 3px; }
+
+.data-card{
+ min-width: 300px;
+ height: 450px; /* Más altas para mejor info */
+ position: relative;
+ border-radius: 12px;
+ overflow: hidden;
+ border: 1px solid var(--glass-border);
+ background: #000;
+ scroll-snap-align: center;
+ transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+ cursor: pointer;
+ group: card;
+}
+.data-card.active{
+ border-color: var(--gold);
+ transform: translateY(-10px);
+ box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+}
+.data-card:hover{ transform: translateY(-5px); }
+
+.media-layer{
+ width: 100%; height: 100%;
+ object-fit: cover;
+ opacity: 0.5;
+ transition: 0.5s;
+}
+.data-card.active .media-layer, .data-card:hover .media-layer{
+ opacity: 1;
+ transform: scale(1.05);
+}
+
+.card-overlay{
+ position: absolute; bottom: 0; inset-x: 0;
+ padding: 20px;
+ background: linear-gradient(to top, #000 10%, transparent);
+ transform: translateY(20px);
+ transition: 0.3s;
+}
+.data-card:hover .card-overlay{ transform: translateY(0); }
+
+.char-name{ font-size: 1.5rem; font-weight: 800; text-transform: uppercase; margin-bottom: 5px; }
+.char-meta{ font-size: 0.8rem; color: var(--gold); letter-spacing: 1px; }
+
+/* --- DATA TREE --- */
+.details-panel{
+ max-width: 1000px;
+ margin: 2rem auto;
+ background: var(--glass-panel);
+ border: 1px solid var(--glass-border);
+ border-radius: 16px;
+ overflow: hidden;
+ position: relative;
+}
+.details-panel::before{
+ content:''; position: absolute; top:0; left:0; width: 4px; height: 100%;
+ background: var(--gold);
+ box-shadow: 0 0 15px var(--gold);
+}
+
+.tree-node{
+ border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.node-head{
+ padding: 1.5rem;
+ display: flex; justify-content: space-between; align-items: center;
+ cursor: pointer;
+ transition: 0.3s;
+}
+.node-head:hover{ background: rgba(255,255,255,0.02); padding-left: 2rem; }
+.node-body{
+ max-height: 0; overflow: hidden;
+ transition: max-height 0.5s ease;
+ background: rgba(0,0,0,0.3);
+ padding: 0 1.5rem;
+}
+.tree-node.open .node-body{ max-height: 300px; padding-bottom: 1.5rem; }
+.tree-node.open .node-head{ color: var(--gold); }
+
+/* --- NARRADOR --- */
+.narrator-box{
+ position: fixed; bottom: 20px; right: 20px; left: 20px;
+ background: rgba(0, 0, 0, 0.9);
+ border: 1px solid var(--saiyan-blue);
+ padding: 15px;
+ border-radius: 8px;
+ z-index: 100;
+ display: flex; gap: 15px; align-items: flex-start;
+ transform: translateY(150%);
+ transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+ max-width: 600px;
+ margin: 0 auto;
+ box-shadow: 0 0 20px rgba(0, 229, 255, 0.2);
+}
+.narrator-box.active{ transform: translateY(0); }
+.ai-avatar{
+ width: 40px; height: 40px; border-radius: 50%;
+ background: var(--saiyan-blue);
+ display: grid; place-items: center;
+ font-weight: bold; color: #000;
+ box-shadow: 0 0 10px var(--saiyan-blue);
+ animation: pulseAI 2s infinite;
+ flex-shrink: 0;
+}
+#narrator-text{
+ font-family: monospace;
+ line-height: 1.4;
+ color: var(--saiyan-blue);
+ font-size: 0.9rem;
+}
+#cursor{
+ display: inline-block; width: 8px; height: 15px; background: var(--saiyan-blue);
+ animation: blink 1s infinite;
+}
+
+/* --- GLITCH FX --- */
+.glitch-mode{
+ animation: shake 0.2s infinite;
+ filter: hue-rotate(90deg) contrast(1.2);
+}
+.glitch-mode .cyber-grid{ background-image: linear-gradient(rgba(255,0,0,0.1) 1px, transparent 1px); }
+
+@keyframes pulseAI{ 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+@keyframes blink{ 50%{opacity:0;} }
+@keyframes shake{ 0%{transform:translate(0)} 25%{transform:translate(2px,2px)} 75%{transform:translate(-2px,-2px)} }
+
+@media(max-width: 700px){
+ .search-bar{ grid-template-columns: 1fr; }
+ .brand-title{ font-size: 2.5rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="cyber-grid"></div>
+<div class="vignette"></div>
+
+<header>
+ <div class="brand-title">DRAGON BALL</div>
+ <div class="hud-stats">
+  <div class="hud-chip">📡 NETWORK: ONLINE</div>
+  <div class="hud-chip">💾 ENTRIES: <span id="count">0</span></div>
+  <div class="hud-chip danger">⚡ POWER: MAX</div>
+ </div>
+</header>
+
+<div class="search-bar">
+ <input type="text" id="searchInput" placeholder="Buscar guerrero, técnica o transformación...">
+ <select id="uniFilter">
+  <option value="ALL">🌌 Multiverso</option>
+  <option value="Z">⚡ Saga Z</option>
+  <option value="SUPER">🔥 Dragon Ball Super</option>
+  <option value="GT">⚙️ GT / No Canon</option>
+ </select>
+</div>
+
+<section>
+ <div class="h-scroll" id="cardContainer">
+  </div>
+</section>
+
+<section class="details-panel" id="treeContainer">
+ </section>
+
+<div class="narrator-box" id="narratorBox">
+ <div class="ai-avatar">AI</div>
+ <div>
+  <span id="narrator-text"></span><span id="cursor"></span>
+ </div>
+</div>
+
+<script>
+// ================= DATOS OPTIMIZADOS =================
+const DB_ARCHIVE = [
+ {
+  id: "goku_ui",
+  name: "Son Goku",
+  form: "Ultra Instinto Dominado",
+  universe: "SUPER",
+  lore: "Goku rompió sus límites durante el Torneo del Poder. El Ultra Instinto permite que el cuerpo reaccione independientemente de la mente, alcanzando una velocidad y precisión divinas.",
+  media: "https://media.giphy.com/media/19JSAo8wfrEbS/giphy.gif", 
+  tags: ["Saiyajin", "Dios", "Ángel"]
+ },
+ {
+  id: "vegeta_ue",
+  name: "Vegeta IV",
+  form: "Ultra Ego (Hakai)",
+  universe: "SUPER",
+  lore: "A diferencia de Goku, Vegeta abraza la destrucción. El Ultra Ego se fortalece cuanto más daño recibe el usuario, convirtiendo el dolor en poder puro de Dios de la Destrucción.",
+  media: "https://media.giphy.com/media/84CRvhy2DJFwlGF0O/giphy.gif",
+  tags: ["Príncipe", "Destrucción", "Orgullo"]
+ },
+ {
+  id: "gohan_beast",
+  name: "Son Gohan",
+  form: "Modo Bestia",
+  universe: "SUPER",
+  lore: "La evolución final del potencial híbrido. Gohan despierta una bestia interior con ojos rojos y cabello blanco, superando incluso a Goku y Vegeta en poder bruto momentáneo.",
+  media: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmZzbGZxbjZzbGZxbjZzbGZxbjZzbGZxbjZzbGZxbjZzbGZxbSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26FxGPtjnVeS6qiJ2/giphy.gif",
+  tags: ["Híbrido", "Ira", "Tierra"]
+ },
+ {
+  id: "broly_fp",
+  name: "Broly",
+  form: "Super Saiyajin Full Power",
+  universe: "SUPER",
+  lore: "El Saiyajin Legendario. Su poder no tiene techo lógico; aprende y se fortalece en tiempo real mientras lucha, aunque pierde la cordura ante su propia fuerza desmedida.",
+  media: "https://media.giphy.com/media/v6vFygoX4j5de/giphy.gif",
+  tags: ["Mutante", "Leyenda", "Berserker"]
+ },
+ {
+  id: "black_rose",
+  name: "Goku Black",
+  form: "Super Saiyajin Rosé",
+  universe: "SUPER",
+  lore: "Zamasu robó el cuerpo de Goku y coloreó su ki con su propia esencia divina maligna. El Rosé es la interpretación de un Dios del Super Saiyajin.",
+  media: "https://media.giphy.com/media/mG1uA7JnuAZqbWV44g/giphy.gif",
+  tags: ["Kaioshin", "Villano", "Tiempo"]
+ },
+ {
+  id: "goku_ssj4",
+  name: "Goku (GT)",
+  form: "Super Saiyajin 4",
+  universe: "GT",
+  lore: "El control racional del poder Ozaru. Una forma primitiva y salvaje que recupera la cola y el pelaje rojo, conectando al Saiyajin con sus orígenes primordiales.",
+  media: "https://media.giphy.com/media/11oEAqbgvAZIKQ/giphy.gif",
+  tags: ["GT", "Ozaru", "Primitivo"]
+ }
+];
+
+// ================= MOTOR LÓGICO =================
+const UI = {
+ cards: document.getElementById('cardContainer'),
+ tree: document.getElementById('treeContainer'),
+ search: document.getElementById('searchInput'),
+ filter: document.getElementById('uniFilter'),
+ counter: document.getElementById('count'),
+ narrator: {
+  box: document.getElementById('narratorBox'),
+  text: document.getElementById('narrator-text')
+ }
+};
+
+let activeEntryId = null;
+let typingTimer = null;
+
+function initSystem(){
+ UI.counter.innerText = DB_ARCHIVE.length;
+ render(DB_ARCHIVE);
+ 
+ UI.search.addEventListener('input', (e) => filterData(e.target.value, UI.filter.value));
+ UI.filter.addEventListener('change', (e) => filterData(UI.search.value, e.target.value));
+}
+
+function render(data){
+ UI.cards.innerHTML = '';
+ UI.tree.innerHTML = '';
+ 
+ if(data.length === 0){
+  UI.cards.innerHTML = '<div style="color:#666; padding:20px;">No se encontraron datos en el archivo.</div>';
+  return;
+ }
+
+ data.forEach(item => {
+  // 1. Crear Tarjeta
+  const card = document.createElement('div');
+  card.className = 'data-card';
+  card.dataset.id = item.id;
+  card.onclick = () => selectEntry(item);
+
+  // Manejo de media seguro (si es video o gif)
+  let mediaHtml = `<img src="${item.media}" class="media-layer" alt="${item.name}" onerror="this.src='https://placehold.co/400x600/111/444?text=NO+SIGNAL'">`;
+  
+  if(item.media.endsWith('.mp4')){
+   mediaHtml = `<video src="${item.media}" class="media-layer" muted loop autoplay playsinline onerror="this.style.display='none'"></video>`;
+  }
+
+  card.innerHTML = `
+   ${mediaHtml}
+   <div class="card-overlay">
+    <div class="char-name">${item.name}</div>
+    <div class="char-meta">${item.form}</div>
+    <div class="char-meta" style="color:var(--saiyan-blue); margin-top:5px">UNIVERSO ${item.universe}</div>
+   </div>
+  `;
+  UI.cards.appendChild(card);
+
+  // 2. Crear Nodo Árbol
+  const node = document.createElement('div');
+  node.className = 'tree-node';
+  node.dataset.id = item.id;
+  node.innerHTML = `
+   <div class="node-head" onclick="toggleTree(this)">
+    <span>${item.name} <small style="opacity:0.5">:: ${item.universe}</small></span>
+    <span style="color:var(--gold)">+</span>
+   </div>
+   <div class="node-body">
+    <p style="margin-bottom:10px; color:#ccc">${item.lore}</p>
+    <div class="hud-chip">${item.tags.join(' // ')}</div>
+   </div>
+  `;
+  UI.tree.appendChild(node);
+ });
+}
+
+function selectEntry(item){
+ // Highlight visual
+ document.querySelectorAll('.data-card').forEach(c => c.classList.remove('active'));
+ const activeCard = document.querySelector(`.data-card[dataset-id="${item.id}"]`);
+ if(activeCard) activeCard.classList.add('active');
+
+ // Highlight Tree
+ document.querySelectorAll('.tree-node').forEach(n => {
+  n.classList.remove('open');
+  if(n.dataset.id === item.id) {
+   n.classList.add('open');
+   n.scrollIntoView({behavior: 'smooth', block: 'center'});
+  }
+ });
+
+ // Efecto Glitch si cambia de universo
+ if(item.universe !== 'Z' && item.universe !== 'SUPER'){
+  document.body.classList.add('glitch-mode');
+  setTimeout(() => document.body.classList.remove('glitch-mode'), 500);
+ }
+
+ // Narrador (Lógica corregida)
+ typeWriter(item.lore);
+}
+
+function toggleTree(head){
+ const parent = head.parentElement;
+ const isOpen = parent.classList.contains('open');
+ // Cerrar otros
+ document.querySelectorAll('.tree-node').forEach(n => n.classList.remove('open'));
+ if(!isOpen) parent.classList.add('open');
+}
+
+function filterData(text, uni){
+ const q = text.toLowerCase();
+ const filtered = DB_ARCHIVE.filter(i => {
+  const matchText = i.name.toLowerCase().includes(q) || i.form.toLowerCase().includes(q);
+  const matchUni = uni === 'ALL' || i.universe === uni;
+  return matchText && matchUni;
+ });
+ render(filtered);
+}
+
+// LÓGICA DE ESCRITURA CORREGIDA (Sin superposición)
+function typeWriter(text){
+ UI.narrator.box.classList.add('active');
+ UI.narrator.text.innerHTML = '';
+ 
+ // Limpiar timer anterior si existe
+ if(typingTimer) clearInterval(typingTimer);
+ 
+ let i = 0;
+ const speed = 25; // ms
+ 
+ typingTimer = setInterval(() => {
+  if(i < text.length){
+   UI.narrator.text.textContent += text.charAt(i);
+   i++;
+  } else {
+   clearInterval(typingTimer);
+   // Auto ocultar después de 5s de terminar
+   setTimeout(() => UI.narrator.box.classList.remove('active'), 8000);
+  }
+ }, speed);
+}
+
+// START
+document.addEventListener('DOMContentLoaded', initSystem);
+
+  /* --- NUEVO: INTERFAZ DE COMBATE (MODAL) --- */
+.combat-modal {
+ position: fixed; inset: 0; z-index: 1000;
+ background: rgba(0, 0, 0, 0.95);
+ backdrop-filter: blur(15px);
+ display: grid; place-items: center;
+ opacity: 0; pointer-events: none;
+ transition: 0.4s;
+}
+.combat-modal.active { opacity: 1; pointer-events: all; }
+
+.scouter-hud {
+ width: 90%; max-width: 1000px; height: 80vh;
+ display: grid; grid-template-columns: 1fr 1fr;
+ border: 1px solid var(--glass-border);
+ background: radial-gradient(circle at top right, rgba(0, 229, 255, 0.1), transparent 60%);
+ box-shadow: 0 0 50px rgba(0,0,0,0.8);
+ position: relative;
+ overflow: hidden;
+}
+
+/* Columna Izquierda: Visual */
+.char-view { position: relative; overflow: hidden; }
+.char-img-full { 
+ width: 100%; height: 100%; object-fit: contain; 
+ filter: drop-shadow(0 0 20px rgba(255,255,255,0.1));
+ transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.aura-fx {
+ position: absolute; inset: 0;
+ background: radial-gradient(circle at 50% 50%, var(--aura-color, transparent) 0%, transparent 70%);
+ opacity: 0.4; mix-blend-mode: screen;
+ animation: pulseAura 2s infinite;
+}
+
+/* Columna Derecha: Datos */
+.data-console { padding: 3rem; display: flex; flex-direction: column; gap: 2rem; }
+.form-switcher { display: flex; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; }
+.form-btn {
+ background: transparent; border: 1px solid var(--glass-border);
+ color: #666; padding: 10px 20px; cursor: pointer;
+ transition: 0.3s; clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+ font-family: var(--font-tech); font-weight: bold;
+ text-transform: uppercase;
+}
+.form-btn:hover, .form-btn.active {
+ border-color: var(--gold); color: #fff; background: rgba(255, 215, 0, 0.1);
+ box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
+}
+
+/* Barras de Poder */
+.stat-row { margin-bottom: 10px; }
+.stat-label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 5px; color: var(--saiyan-blue); }
+.bar-track { height: 6px; background: rgba(255,255,255,0.1); width: 100%; }
+.bar-fill { 
+ height: 100%; background: var(--gold); width: 0%; 
+ transition: width 1s cubic-bezier(0.22, 1, 0.36, 1);
+ box-shadow: 0 0 10px var(--gold);
+}
+
+.close-btn {
+ position: absolute; top: 20px; right: 20px;
+ font-size: 2rem; color: #fff; cursor: pointer; z-index: 10;
+}
+
+@keyframes pulseAura { 0%,100%{opacity:0.3} 50%{opacity:0.6} }
+@media(max-width: 800px){ .scouter-hud{ grid-template-columns: 1fr; overflow-y: auto; } }
+  
+// ================= BASE DE DATOS EVOLUCIONADA (V3) =================
+const DB_OMNI = [
+ {
+  id: "goku",
+  name: "Son Goku",
+  universe: "SUPER",
+  baseForm: 0, // Índice inicial
+  forms: [
+   {
+    name: "Base",
+    img: "https://static.wikia.nocookie.net/dragonball/images/5/5b/Goku_Super_Hero_Artwork.png",
+    stats: { str: 40, spd: 45, tec: 90 },
+    aura: "transparent"
+   },
+   {
+    name: "Super Saiyajin",
+    img: "https://static.wikia.nocookie.net/dragonball/images/d/d1/Goku_SSJ_Dokkan_Battle.png",
+    stats: { str: 65, spd: 60, tec: 85 },
+    aura: "#ffd700"
+   },
+   {
+    name: "Ultra Instinto",
+    img: "https://static.wikia.nocookie.net/dragonball/images/8/8a/Goku_UI.png",
+    stats: { str: 98, spd: 100, tec: 100 },
+    aura: "#e0e6ed"
+   }
+  ],
+  lore: "El Saiyajin criado en la Tierra. Su capacidad para romper límites es infinita. El Ultra Instinto lo separa de los mortales y lo acerca a los Ángeles."
+ },
+ {
+  id: "vegeta",
+  name: "Vegeta IV",
+  universe: "SUPER",
+  baseForm: 1, 
+  forms: [
+   {
+    name: "SSJ Blue",
+    img: "https://static.wikia.nocookie.net/dragonball/images/9/93/Vegeta_SSGSS.png",
+    stats: { str: 85, spd: 80, tec: 95 },
+    aura: "#00e5ff"
+   },
+   {
+    name: "Ultra Ego",
+    img: "https://static.wikia.nocookie.net/dragonball/images/6/62/Vegeta_Ultra_Ego_Manga_Color.png",
+    stats: { str: 100, spd: 90, tec: 80 },
+    aura: "#9d00ff"
+   }
+  ],
+  lore: "El Príncipe de los Saiyajin. Mientras Goku busca la paz mental, Vegeta usa el Ultra Ego para convertir el daño de batalla en combustible puro."
+ },
+ {
+  id: "gohan",
+  name: "Son Gohan",
+  universe: "SUPER",
+  baseForm: 1,
+  forms: [
+   {
+    name: "Ultimate",
+    img: "https://static.wikia.nocookie.net/dragonball/images/c/c5/Gohan_Ultimate_SH.png",
+    stats: { str: 80, spd: 75, tec: 90 },
+    aura: "#fff"
+   },
+   {
+    name: "Beast Mode",
+    img: "https://static.wikia.nocookie.net/dragonball/images/2/2f/Gohan_Beast.png",
+    stats: { str: 100, spd: 95, tec: 85 },
+    aura: "#ff2a2a"
+   }
+  ],
+  lore: "Cuando la ira rompe la razón, Gohan despierta a la Bestia. Un poder que rivaliza con los dioses sin necesidad de entrenamiento divino."
+ },
+ {
+  id: "freezer",
+  name: "Freezer",
+  universe: "SUPER",
+  baseForm: 1,
+  forms: [
+    {
+     name: "Golden",
+     img: "https://static.wikia.nocookie.net/dragonball/images/8/8a/Frieza_Golden.png",
+     stats: { str: 85, spd: 85, tec: 80 },
+     aura: "#ffd700"
+    },
+    {
+     name: "Black Freezer",
+     img: "https://static.wikia.nocookie.net/dragonball/images/1/18/Black_Frieza.png",
+     stats: { str: 100, spd: 100, tec: 100 }, // Maxed out logic
+     aura: "#333"
+    }
+  ],
+  lore: "El emperador del mal. Tras entrenar en una dimensión paralela por 10 años, logró una forma capaz de derrotar a los Saiyajin de un solo golpe."
+ }
+];
+
+// ================= LÓGICA V3 =================
+const UI = {
+ cards: document.getElementById('cardContainer'),
+ modal: document.getElementById('combatModal'),
+ modalImg: document.getElementById('modalImg'),
+ modalName: document.getElementById('modalName'),
+ modalForm: document.getElementById('modalForm'),
+ modalDesc: document.getElementById('modalDesc'),
+ modalAura: document.getElementById('modalAura'),
+ btnContainer: document.getElementById('formButtons'),
+ bars: {
+  str: document.getElementById('bar-str'),
+  spd: document.getElementById('bar-spd'),
+  tec: document.getElementById('bar-tec')
+ },
+ vals: {
+  str: document.getElementById('val-str'),
+  spd: document.getElementById('val-spd'),
+  tec: document.getElementById('val-tec')
+ }
+};
+
+let currentHero = null;
+
+// INIT
+document.addEventListener('DOMContentLoaded', () => {
+ renderCards();
+});
+
+function renderCards(){
+ UI.cards.innerHTML = '';
+ DB_OMNI.forEach(hero => {
+  const card = document.createElement('div');
+  card.className = 'data-card';
+  // Usamos la imagen de la forma base por defecto
+  const mainImg = hero.forms[hero.baseForm].img;
+  
+  card.innerHTML = `
+   <img src="${mainImg}" class="media-layer">
+   <div class="card-overlay">
+    <div class="char-name">${hero.name}</div>
+    <div class="char-meta">${hero.universe}</div>
+   </div>
+  `;
+  card.onclick = () => openCombatMode(hero);
+  UI.cards.appendChild(card);
+ });
+}
+
+// ABRIR MODAL
+function openCombatMode(hero){
+ currentHero = hero;
+ UI.modal.classList.add('active');
+ UI.modalName.textContent = hero.name;
+ UI.modalDesc.textContent = hero.lore;
+ 
+ // Generar botones de transformación
+ UI.btnContainer.innerHTML = '';
+ hero.forms.forEach((form, index) => {
+  const btn = document.createElement('button');
+  btn.className = 'form-btn';
+  btn.innerText = form.name;
+  btn.onclick = () => transform(index);
+  UI.btnContainer.appendChild(btn);
+ });
+
+ // Cargar forma inicial (o la baseForm definida)
+ transform(hero.baseForm);
+}
+
+// CERRAR MODAL
+function closeCombatMode(){
+ UI.modal.classList.remove('active');
+}
+
+// LÓGICA DE TRANSFORMACIÓN
+function transform(index){
+ const form = currentHero.forms[index];
+ 
+ // 1. Actualizar botones visualmente
+ const btns = UI.btnContainer.querySelectorAll('.form-btn');
+ btns.forEach((b, i) => {
+  b.classList.toggle('active', i === index);
+ });
+
+ // 2. Efecto Glitch en la imagen para transición suave
+ UI.modalImg.style.opacity = 0;
+ UI.modalImg.style.transform = 'scale(0.9) translateX(-10px)';
+ 
+ setTimeout(() => {
+  UI.modalImg.src = form.img;
+  UI.modalForm.innerText = form.name;
+  UI.modalAura.style.setProperty('--aura-color', form.aura);
+  
+  UI.modalImg.style.opacity = 1;
+  UI.modalImg.style.transform = 'scale(1) translateX(0)';
+  
+  updateStats(form.stats);
+ }, 200);
+}
+
+// ANIMACIÓN DE BARRAS
+function updateStats(stats){
+ // Reseteamos a 0 primero para que se vea la animación subir
+ UI.bars.str.style.width = '0%';
+ UI.bars.spd.style.width = '0%';
+ UI.bars.tec.style.width = '0%';
+
+ setTimeout(() => {
+  UI.bars.str.style.width = stats.str + '%';
+  UI.vals.str.innerText = stats.str;
+
+  UI.bars.spd.style.width = stats.spd + '%';
+  UI.vals.spd.innerText = stats.spd;
+
+  UI.bars.tec.style.width = stats.tec + '%';
+  UI.vals.tec.innerText = stats.tec;
+ }, 100);
+}
+</script>
